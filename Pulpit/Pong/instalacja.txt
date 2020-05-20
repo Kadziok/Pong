@@ -1,0 +1,20 @@
+python3.8 -m pip install pygame==2.0.0.dev6
+python3.8 -m pip install PyQt5 SIP
+python3.8 -m pip install mysql-connector-python
+
+
+##################MYSQL########################
+
+host="localhost",
+user="server",
+passwd="zaq1@WSX",
+database="pong"
+
+CREATE TABLE users (
+id INT(6) UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+login VARCHAR(30) NOT NULL,
+password VARCHAR(30) NOT NULL
+);
+
+INSERT INTO users (login, password) VALUES ("arur","haslo");
+SELECT id FROM users WHERE login="artur" and password = "haslo";
