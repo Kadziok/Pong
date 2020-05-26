@@ -53,7 +53,7 @@ class PongGame(object):
             if event.type == pygame.locals.MOUSEMOTION:
                     x, y = event.pos
                     self.player1.move(x)
-                    self.serwer.wyślij(f"ustaw_{x}_{self.player1.wysokość}_")
+
 
     @staticmethod
     def odbierz_wiadomosc(wiadomość, gra):
@@ -82,7 +82,6 @@ class Przeciwnik(object):
         self.rakieta = rakieta
     def move(self):
         x = self.piłka.pozycja.centerx
-        #narazie bot zawsze porusza się tam gdzie piłeczka
         self.rakieta.move(x)     
 
 class Rysujące(object):
@@ -139,7 +138,7 @@ class Rakieta(Rysujące):
             self.pozycja.x += delta
         else:
             self.pozycja.x = self.szerokość_planszy + self.r_kulki + 4 - self.szerokość 
-
+        self.serwer.wyślij(f"ustaw_{self.pozycja.x}_{self.pozycja.y}_{self.szerokość}_{self.wysokość}_")
 
 class Piłeczka(Rysujące):
     def __init__(self, serwer, szerokość, wysokość, x, y, kolor=(255, 0, 0), prędkość_x=1, prędkość_y=1):
@@ -152,7 +151,7 @@ class Piłeczka(Rysujące):
         self.serwer = serwer
 
     def move(self, Plansza, *args):
-        self.serwer.wyślij(f"piłeczka_{Plansza.szerokość}_{Plansza.wysokość}_")
+        self.serwer.wyślij(f"piłeczka_{Plansza.szerokość}_{Plansza.wysokość}_{self.szerokość}_{self.wysokość}_")
        
        
 

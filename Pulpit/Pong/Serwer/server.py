@@ -1,9 +1,13 @@
 import socket
 import stół
+import pygame
+import pygame.locals
 import klient
 from _thread import *
 import sys
 import os
+
+
 
 class Serwer:
     import os
@@ -170,7 +174,7 @@ class Serwer:
                         else:
                             odpowiedź = "stolnieistnieje"
                         gra = True
-
+                #pobieranie nicku przeciwnika 
                 if reply.startswith("nickprzeciwnika"):
                     numer = int(reply.split("_")[1])
                     s = self.stoły[numer]
@@ -179,13 +183,21 @@ class Serwer:
                     else:
                         odpowiedź = str(s.gracz1_nick)
 
+                # zmiana pozycji rakietki
                 if reply.startswith("ustaw"):
                     print("Y paletki:",reply.split("_")[2])
+                    x = float(reply.split("_")[1])
+                    y = float(reply.split("_")[2])
                     if self.stoły[numer].gracz1 == k.połączenie:
-                        self.stoły[numer].pozycja1 = (reply.split("_")[1],reply.split("_")[2])
+                        self.stoły[numer].pozycja1 = (x,y)
+                        self.stoły[numer].rakieta1.pozycja.x = x
+                        self.stoły[numer].rakieta1.pozycja.y = y
                     else: 
-                        self.stoły[numer].pozycja2 = (reply.split("_")[1],reply.split("_")[2])
-
+                        self.stoły[numer].pozycja2 = (x,y)
+                        self.stoły[numer].rakieta2.pozycja.x = x
+                        self.stoły[numer].rakieta2.pozycja.y = y
+                        
+                # zmiana pozycji piłeczki
                 if reply.startswith("piłeczka"):
                     szerokość = int(reply.split("_")[1])
                     wysokość = int(reply.split("_")[2])
@@ -196,15 +208,17 @@ class Serwer:
                     x += s.prędkość_x
                     y += s.prędkość_y
                     s.piłeczka_pozycja = (x,y)
-
+                    s.piłka.pozycja.x = x
+                    s.piłka.pozycja.y = y
+                   
                     if s.piłeczka_pozycja[0] < 0 or s.piłeczka_pozycja[0] > szerokość:
                         s.prędkość_x *= -1 
 
                     if s.piłeczka_pozycja[1] < 0 or s.piłeczka_pozycja[1] > wysokość:
                         s.prędkość_y *= -1
 
-                    # tutaj nie równe, tylko colliderect z pygame (???)
-                    if s.pozycja1 == s.piłeczka_pozycja or s.pozycja2 == s.piłeczka_pozycja:
+                    # odbijanie od rakietki
+                    if s.piłka.pozycja.colliderect(s.rakieta1.pozycja) or s.piłka.pozycja.colliderect(s.rakieta2.pozycja):
                         s.prędkość_y *= -1
                     
                     if s.piłeczka_pozycja[1] < 0:
