@@ -1,9 +1,10 @@
 import pygame
 import pygame.locals
 import network
+from time import sleep
 
 class Plansza(object):
-    def __init__(self, szerokość, wysokość,tabela,r_kulki,serwer,mój_nick,nick_przeciwnika):
+    def __init__(self, szerokość, wysokość,tabela,r_kulki,serwer,mój_nick,nick_przeciwnika, gra):
         self.tabela = tabela
         self.szerokość = szerokość
         self.wysokość = wysokość
@@ -12,47 +13,55 @@ class Plansza(object):
         self.mój_nick = mój_nick
         self.nick_przeciwnika = nick_przeciwnika
         self.ekran = pygame.display.set_mode((szerokość+tabela, wysokość))
+        self.gra = gra
         
 
         pygame.display.set_caption('Pong by KK&AS')
 
     def rysuj(self, *args):
-        tło = [255, 255, 255]
-        self.ekran.fill(tło, (0,0, self.szerokość + self.r_kulki + 3, self.wysokość))
-        self.ekran.fill((123,123,123), (self.szerokość + self.r_kulki + 8, 0,self.szerokość + self.tabela, self.wysokość))
-        for drawable in args:
-            drawable.aktualizacja(self.ekran)
-        pygame.display.update()
+        if not self.gra.koniec:
+            tło = [255, 255, 255]
+            self.ekran.fill(tło, (0,0, self.szerokość + self.r_kulki + 3, self.wysokość))
+            self.ekran.fill((123,123,123), (self.szerokość + self.r_kulki + 8, 0,self.szerokość + self.tabela, self.wysokość))
+            for drawable in args:
+                drawable.aktualizacja(self.ekran)
+            pygame.display.update()
 
 class PongGame(object):
     def __init__(self, szerokość, wysokość, tabela, r_kulki, serwer, mój_nick, nick_przeciwnika):
         pygame.init()
-        self.Plansza = Plansza(szerokość, wysokość,tabela,r_kulki,serwer,mój_nick,nick_przeciwnika)
+        print("Rozpoczęto grę")
+        self.Plansza = Plansza(szerokość, wysokość,tabela,r_kulki,serwer,mój_nick,nick_przeciwnika, self)
         self.zegar = pygame.time.Clock()
         self.piłka = Piłeczka(serwer, r_kulki, r_kulki, szerokość/2, wysokość/2)
         self.player1 = Rakieta(szerokość=80, wysokość=20, x=szerokość/2 - 40, y=wysokość - 40, kolor=(0,0,0),szerokość_planszy=szerokość,r_kulki=r_kulki,nick = mój_nick,serwer = serwer)
-        self.player2 = Rakieta(szerokość=80, wysokość=20, x=szerokość/2 - 40, y=20, kolor=(0, 0, 0),szerokość_planszy=szerokość,r_kulki=r_kulki,nick = nick_przeciwnika, serwer = serwer)
+        self.player2 = Rakieta(szerokość=80, wysokość=20, x=szerokość/2 - 40, y=40, kolor=(0, 0, 0),szerokość_planszy=szerokość,r_kulki=r_kulki,nick = nick_przeciwnika, serwer = serwer)
         self.przeciwnik = Przeciwnik(self.player2, self.piłka)
         self.sędzia = Sędzia(self.Plansza, self.piłka, self.player2, self.piłka)
         self.serwer = serwer 
+        self.koniec = False
  
 
     def run(self):
-        while not self.handle_events():
+        while not self.koniec and not self.handle_events():
             self.piłka.move(self.Plansza, self.player1, self.player2)
             self.Plansza.rysuj(self.piłka, self.player1, self.player2, self.sędzia)
-            #self.przeciwnik.move()
             self.zegar.tick(10)
 
     def handle_events(self):
         for event in pygame.event.get():
             if event.type == pygame.locals.QUIT:
-                pygame.quit()
+                self.serwer.wyślij("zrezygnuj")
+                print("Wciśnięto X")
+                pygame.display.quit()
                 return True
 
             if event.type == pygame.locals.MOUSEMOTION:
                     x, y = event.pos
                     self.player1.move(x)
+    
+    def zakończ(self):
+        pygame.display.quit()
 
 
     @staticmethod
@@ -65,7 +74,7 @@ class PongGame(object):
             elif x < 0:
                 x = 0
             #symetria!
-            x = 800 - x
+            x = 754 - x
             gra.przeciwnik.rakieta.pozycja.x = x
         elif wiadomość.startswith("zmien.poz.pił"):
             poz = eval(wiadomość.split("_")[1])
@@ -73,6 +82,19 @@ class PongGame(object):
             gra.piłka.pozycja.y = int(poz[1])
             pnk = eval(wiadomość.split("_")[2])
             gra.sędzia.score = pnk
+        elif wiadomość.find("wygral") >= 0:
+            try:
+                nick = wiadomość[wiadomość.index("wygral"):].split("_")[1]
+            except:
+                print(wiadomość)
+                nick = "błąd"
+            moj_font = pygame.font.SysFont('agencyfb',30)
+            text = moj_font.render(f"Koniec gry. Wygrał gracz {nick}", True, (0, 0, 0))
+            pozycja = text.get_rect()
+            pozycja.center = 300, 200
+            gra.Plansza.ekran.blit(text, pozycja)
+            gra.koniec = True
+            gra.zakończ()
 
 
 

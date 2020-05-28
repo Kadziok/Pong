@@ -187,6 +187,7 @@ class EkranStolow(QWidget):
     Otwiera okno gry
     """
     def zacznij_grę(self, nick_przeciwnika):
+        print("Rozpoczynanie gry")
         pong.start(800,400,300,30,self.serwer,self.mój_nick, nick_przeciwnika)
 
 

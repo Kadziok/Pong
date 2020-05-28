@@ -6,6 +6,7 @@ import klient
 from _thread import *
 import sys
 import os
+import mysql.connector
 
 
 
@@ -18,7 +19,6 @@ class Serwer:
 
 
     def __init__(self, ip, port):
-        import mysql.connector
         self.ip = ip
         self.port = 5555
         self.klienci = []
@@ -69,6 +69,27 @@ class Serwer:
         mycursor = self.mydb.cursor()
 
         sql = "INSERT INTO users (login, password) VALUES (%s, %s)"
+        val = tuple(dane)
+        mycursor.execute(sql, val)
+
+        self.mydb.commit()
+
+        print("1 record inserted, ID:", mycursor.lastrowid)
+        return mycursor.lastrowid
+
+    def zapisz_wynik(self, dane):
+        try:
+            mycursor = self.mydb.cursor()
+        except:
+            self.mydb = mysql.connector.connect(
+                host="localhost",
+                user="server",
+                passwd="zaq1@WSX",
+                database="pong"
+                )
+
+        sql = "INSERT INTO scores (player1, player2, score1, score2, winner)\
+             VALUES (%s, %s, %s, %s, %s)"
         val = tuple(dane)
         mycursor.execute(sql, val)
 
@@ -134,13 +155,102 @@ class Serwer:
                     if przeciwnik:
                         przeciwnik.send(str.encode(reply))
                         odpowiedź = None
-                    else:
-                        if reply.startswith("czekam"):
-                            if not self.stoły[numer].czeka:
-                                przeciwnik = self.stoły[numer].przeciwnik(k.połączenie)
-                                odpowiedź = "1"
+
+                    if reply.startswith("czekam"):
+                        if not self.stoły[numer].czeka:
+                            przeciwnik = self.stoły[numer].przeciwnik(k.połączenie)
+                            odpowiedź = "1"
+                        else:
+                            odpowiedź = "0"
+                    
+
+                    # zmiana pozycji rakietki
+                    elif reply.startswith("ustaw"):
+                        #print("Y paletki:",reply.split("_")[2])
+                        #print(f"1 pozycja_{self.stoły[numer].rakieta1.pozycja.x}_{self.stoły[numer].rakieta1.pozycja.y}\n\
+                        #        2 pozycja_{self.stoły[numer].rakieta2.pozycja.x}_{self.stoły[numer].rakieta2.pozycja.y}\n\
+                        #        p pozycja_{self.stoły[numer].piłka.pozycja.x}_{self.stoły[numer].piłka.pozycja.y}\n")
+                        x = float(reply.split("_")[1])
+                        y = float(reply.split("_")[2])
+                        if self.stoły[numer].gracz1 == k.połączenie:
+                            self.stoły[numer].pozycja1 = (x,y)
+                            self.stoły[numer].rakieta1.pozycja.x = x
+                            #self.stoły[numer].rakieta1.pozycja.y = 40
+                        else: 
+                            self.stoły[numer].pozycja2 = (x,y)
+                            self.stoły[numer].rakieta2.pozycja.x = 800 - x - 80
+                            #self.stoły[numer].rakieta2.pozycja.y = 
+                            
+                    # zmiana pozycji piłeczki
+                    elif reply.startswith("piłeczka"):
+                        szerokość = int(reply.split("_")[1])
+                        wysokość = int(reply.split("_")[2])
+                        s = self.stoły[numer]
+                        s.piłeczka_pozycja_startowa = (szerokość/2, wysokość/2)
+                        
+                        (x,y) = s.piłeczka_pozycja
+                        x += s.prędkość_x
+                        y += s.prędkość_y
+                        s.piłeczka_pozycja = (x,y)
+                        s.piłka.pozycja.x = x
+                        s.piłka.pozycja.y = y
+                    
+                        if s.piłeczka_pozycja[0] < 0 or s.piłeczka_pozycja[0] > szerokość:
+                            s.prędkość_x *= -1 
+
+                        if s.piłeczka_pozycja[1] < 0 or s.piłeczka_pozycja[1] > wysokość:
+                            s.prędkość_y *= -1
+
+                        # odbijanie od rakietki
+                        if s.piłka.pozycja.colliderect(s.rakieta1.pozycja) or s.piłka.pozycja.colliderect(s.rakieta2.pozycja):
+                            #print(f"Odbicie {s.piłeczka_pozycja[1]}")
+                            if (s.piłka.pozycja.y < 100 and s.prędkość_y < 0
+                                or s.piłka.pozycja.y  > 200 and s.prędkość_y > 0):
+                                s.prędkość_y *= -1
+                                print(f"1 pozycja_{self.stoły[numer].rakieta1.pozycja.x}_{self.stoły[numer].rakieta1.pozycja.y}\n\
+                                2 pozycja_{self.stoły[numer].rakieta2.pozycja.x}_{self.stoły[numer].rakieta2.pozycja.y}\n\
+                                p pozycja_{self.stoły[numer].piłka.pozycja.x}_{self.stoły[numer].piłka.pozycja.y}\n")
+
+                        
+                        if s.piłeczka_pozycja[1] < 0:
+                            s.score[0] += 1
+                            self.reset_piłki(s)
+                        elif s.piłeczka_pozycja[1] > wysokość:
+                            s.score[1] += 1
+                            self.reset_piłki(s)
+
+
+                        # kończenie gry po uzyskaniu odpowiedniego wyniku
+
+                        if s.score[0] == 3 or s.score[1] == 3:
+                            gra = False
+                            if s.score[0] == 3:
+                                nick = s.gracz1_nick
                             else:
-                                odpowiedź = "0"
+                                nick = s.gracz2_nick
+                            k.wyślij(f"wygral_{nick}")
+                            
+
+                            if s.czeka == "wyszedl":
+                                if numer in self.stoły:
+                                    self.stoły.pop(numer, None)
+                            else:
+                                self.zapisz_wynik([s.gracz1_nick, s.gracz2_nick,
+                                    s.score[0], s.score[1], nick])
+                                s.czeka = "wyszedl"
+                            
+                            numer = None
+
+
+                        # pomimo, że na serwerze zapisywane są wyniki i pozycja piłki jak dla pierwszego gracza
+                        # drugi gracz powinien dostać je symetryczne
+                        if s.gracz1 == k.połączenie:
+                            odpowiedź = f"zmien.poz.pił_{s.piłeczka_pozycja}_{s.score}_"
+                        else:
+                            (x_pił,y_pił) = s.piłeczka_pozycja
+                            zwracana_pozycja = (szerokość - x_pił, wysokość - y_pił)
+                            zwracany_score = s.score[::-1]
+                            odpowiedź = f"zmien.poz.pił_{zwracana_pozycja}_{zwracany_score}_"
 
 
                 else:
@@ -174,6 +284,19 @@ class Serwer:
                         else:
                             odpowiedź = "stolnieistnieje"
                         gra = True
+
+
+
+                # pobieranie nicku przeciwnika
+                if reply.startswith("nickprzeciwnika"):
+                    numer = int(reply.split("_")[1])
+                    s = self.stoły[numer]
+                    if user_nick == s.gracz1_nick:
+                        odpowiedź = str(s.gracz2_nick)
+                    else:
+                        odpowiedź = str(s.gracz1_nick)
+
+                """
                 #pobieranie nicku przeciwnika 
                 if reply.startswith("nickprzeciwnika"):
                     numer = int(reply.split("_")[1])
@@ -185,17 +308,20 @@ class Serwer:
 
                 # zmiana pozycji rakietki
                 if reply.startswith("ustaw"):
-                    print("Y paletki:",reply.split("_")[2])
+                    #print("Y paletki:",reply.split("_")[2])
+                    #print(f"1 pozycja_{self.stoły[numer].rakieta1.pozycja.x}_{self.stoły[numer].rakieta1.pozycja.y}\n\
+                    #        2 pozycja_{self.stoły[numer].rakieta2.pozycja.x}_{self.stoły[numer].rakieta2.pozycja.y}\n\
+                    #        p pozycja_{self.stoły[numer].piłka.pozycja.x}_{self.stoły[numer].piłka.pozycja.y}\n")
                     x = float(reply.split("_")[1])
                     y = float(reply.split("_")[2])
                     if self.stoły[numer].gracz1 == k.połączenie:
                         self.stoły[numer].pozycja1 = (x,y)
                         self.stoły[numer].rakieta1.pozycja.x = x
-                        self.stoły[numer].rakieta1.pozycja.y = y
+                        #self.stoły[numer].rakieta1.pozycja.y = 40
                     else: 
                         self.stoły[numer].pozycja2 = (x,y)
-                        self.stoły[numer].rakieta2.pozycja.x = x
-                        self.stoły[numer].rakieta2.pozycja.y = y
+                        self.stoły[numer].rakieta2.pozycja.x = 800 - x - 80
+                        #self.stoły[numer].rakieta2.pozycja.y = 
                         
                 # zmiana pozycji piłeczki
                 if reply.startswith("piłeczka"):
@@ -219,7 +345,14 @@ class Serwer:
 
                     # odbijanie od rakietki
                     if s.piłka.pozycja.colliderect(s.rakieta1.pozycja) or s.piłka.pozycja.colliderect(s.rakieta2.pozycja):
-                        s.prędkość_y *= -1
+                        #print(f"Odbicie {s.piłeczka_pozycja[1]}")
+                        if (s.piłka.pozycja.y < 100 and s.prędkość_y < 0
+                            or s.piłka.pozycja.y  > 200 and s.prędkość_y > 0):
+                            s.prędkość_y *= -1
+                            print(f"1 pozycja_{self.stoły[numer].rakieta1.pozycja.x}_{self.stoły[numer].rakieta1.pozycja.y}\n\
+                            2 pozycja_{self.stoły[numer].rakieta2.pozycja.x}_{self.stoły[numer].rakieta2.pozycja.y}\n\
+                            p pozycja_{self.stoły[numer].piłka.pozycja.x}_{self.stoły[numer].piłka.pozycja.y}\n")
+
                     
                     if s.piłeczka_pozycja[1] < 0:
                         s.score[0] += 1
@@ -237,6 +370,7 @@ class Serwer:
                         zwracana_pozycja = (szerokość - x_pił, wysokość - y_pił)
                         zwracany_score = s.score[::-1]
                         odpowiedź = f"zmien.poz.pił_{zwracana_pozycja}_{zwracany_score}_"
+                """
 
 
                 if reply == "__shut_down__":
@@ -249,7 +383,7 @@ class Serwer:
                 if not data:
                     print("Disconnected")
                     break
-                else:
+                elif False:
                     print("From:",user_id)
                     print("Received: ", reply)
                     print("Sending : ", odpowiedź)

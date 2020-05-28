@@ -32,11 +32,11 @@ class Stół:
         self.pozycja2 = (0,0)
         self.piłeczka_pozycja = (400,200)
         self.prędkość_x = 1.0
-        self.prędkość_y = 1.0
+        self.prędkość_y = 4.0
         self.piłeczka_pozycja_startowa = (400,200)
         self.score = [0, 0]
-        self.rakieta1 = Rakieta(80, 20, 360 , 360)
-        self.rakieta2 = Rakieta(80,20,360,20)
+        self.rakieta1 = Rakieta(80, 20, 360, 360)
+        self.rakieta2 = Rakieta(80, 20, 360, 40)
         self.piłka = Piłka(30, 30, 400, 200)
 
     def dołącz(self, gracz):
@@ -59,3 +59,5 @@ class Stół:
         else:
             self.pozycja2 = pozycja
             return self.pozycja1
+
+ 
