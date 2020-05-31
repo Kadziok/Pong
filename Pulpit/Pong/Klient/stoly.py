@@ -66,7 +66,6 @@ class EkranStolow(QWidget):
 
         dodajBtn = QPushButton("Dodaj stół")
         dołączBtn = QPushButton("Dołącz do stołu")
-        profilBtn = QPushButton("Przeglądaj profil")
         wylogujBtn = QPushButton("Wyloguj")
 
         try:
@@ -81,7 +80,6 @@ class EkranStolow(QWidget):
         witaj.setStyleSheet("border: 1px solid #ccc;")
 
         uklad2.addWidget(witaj)
-        uklad2.addWidget(profilBtn)
         uklad2.addWidget(wylogujBtn)
 
         przerwa = QLabel("\n"*5)
