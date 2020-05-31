@@ -69,11 +69,15 @@ class EkranStolow(QWidget):
         profilBtn = QPushButton("Przeglądaj profil")
         wylogujBtn = QPushButton("Wyloguj")
 
+        try:
+            ranking = int(self.serwer.wyślij("ranking"))
+        except ValueError:
+            ranking = -1
 
-        """
-        TODO: łącznie z serwerem i pobieranie pozycji rankingowej
-        """
-        witaj = QLabel(f"Witaj {self.mój_nick}!\nAktualnie jesteś {None} w rankingu.")
+        if ranking == -1:
+            witaj = QLabel(f"Witaj {self.mój_nick}!\nNie masz jeszcze pozycji rankingowej.")
+        else:
+            witaj = QLabel(f"Witaj {self.mój_nick}!\nAktualnie jesteś {ranking} w rankingu.")
         witaj.setStyleSheet("border: 1px solid #ccc;")
 
         uklad2.addWidget(witaj)
@@ -129,7 +133,6 @@ class EkranStolow(QWidget):
                 self._popframe = TranslucentWidget(self)
                 self._popframe.move(0, 0)
                 self._popframe.resize(self.width(), self.height())
-                #self._popframe.SIGNALS.CLOSE.connect(self._closepopup)
                 self._popflag = True
                 self._popframe.show()
         else:

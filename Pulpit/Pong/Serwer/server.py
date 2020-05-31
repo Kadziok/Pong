@@ -87,6 +87,7 @@ class Serwer:
                 passwd="zaq1@WSX",
                 database="pong"
                 )
+            mycursor = self.mydb.cursor()
 
         sql = "INSERT INTO scores (player1, player2, score1, score2, winner)\
              VALUES (%s, %s, %s, %s, %s)"
@@ -97,6 +98,36 @@ class Serwer:
 
         print("1 record inserted, ID:", mycursor.lastrowid)
         return mycursor.lastrowid
+
+    def ranking(self, nick):
+        try:
+            mycursor = self.mydb.cursor()
+        except:
+            self.mydb = mysql.connector.connect(
+                host="localhost",
+                user="server",
+                passwd="zaq1@WSX",
+                database="pong"
+                )
+            mycursor = self.mydb.cursor()
+        
+        mycursor.execute("select winner, count(winner) as wins \
+             from scores group by winner order by wins desc;")
+
+        res = mycursor.fetchall()
+
+        
+        n = 1
+        for i in res:
+            if i[0] == nick:
+                break
+            n += 1
+
+        if n > len(res):
+            n = -1
+        
+        return str(n)
+
 
     def threaded_client(self, k):
         import traceback
@@ -144,7 +175,7 @@ class Serwer:
                     else:
                         odpowiedź = "błądlogowania"
 
-                
+                # Obsługa gry
                 elif gra: 
 
                     # Rezygnacja z gry, np w trakcie oczekiwania na przeciwnika
@@ -166,20 +197,14 @@ class Serwer:
 
                     # zmiana pozycji rakietki
                     elif reply.startswith("ustaw"):
-                        #print("Y paletki:",reply.split("_")[2])
-                        #print(f"1 pozycja_{self.stoły[numer].rakieta1.pozycja.x}_{self.stoły[numer].rakieta1.pozycja.y}\n\
-                        #        2 pozycja_{self.stoły[numer].rakieta2.pozycja.x}_{self.stoły[numer].rakieta2.pozycja.y}\n\
-                        #        p pozycja_{self.stoły[numer].piłka.pozycja.x}_{self.stoły[numer].piłka.pozycja.y}\n")
                         x = float(reply.split("_")[1])
                         y = float(reply.split("_")[2])
                         if self.stoły[numer].gracz1 == k.połączenie:
                             self.stoły[numer].pozycja1 = (x,y)
                             self.stoły[numer].rakieta1.pozycja.x = x
-                            #self.stoły[numer].rakieta1.pozycja.y = 40
                         else: 
                             self.stoły[numer].pozycja2 = (x,y)
                             self.stoły[numer].rakieta2.pozycja.x = 800 - x - 80
-                            #self.stoły[numer].rakieta2.pozycja.y = 
                             
                     # zmiana pozycji piłeczki
                     elif reply.startswith("piłeczka"):
@@ -203,7 +228,6 @@ class Serwer:
 
                         # odbijanie od rakietki
                         if s.piłka.pozycja.colliderect(s.rakieta1.pozycja) or s.piłka.pozycja.colliderect(s.rakieta2.pozycja):
-                            #print(f"Odbicie {s.piłeczka_pozycja[1]}")
                             if (s.piłka.pozycja.y < 100 and s.prędkość_y < 0
                                 or s.piłka.pozycja.y  > 200 and s.prędkość_y > 0):
                                 s.prędkość_y *= -1
@@ -254,6 +278,7 @@ class Serwer:
 
 
                 else:
+                    # Pobieranie listy stołów
                     if reply.startswith("pobierzstoly"):
                         stoły = [str(i.numer) + ":1" if i.czeka
                             else str(i.numer) + ":0" for i in sorted(self.stoły.values(),
@@ -296,81 +321,10 @@ class Serwer:
                     else:
                         odpowiedź = str(s.gracz1_nick)
 
-                """
-                #pobieranie nicku przeciwnika 
-                if reply.startswith("nickprzeciwnika"):
-                    numer = int(reply.split("_")[1])
-                    s = self.stoły[numer]
-                    if user_nick == s.gracz1_nick:
-                        odpowiedź = str(s.gracz2_nick)
-                    else:
-                        odpowiedź = str(s.gracz1_nick)
 
-                # zmiana pozycji rakietki
-                if reply.startswith("ustaw"):
-                    #print("Y paletki:",reply.split("_")[2])
-                    #print(f"1 pozycja_{self.stoły[numer].rakieta1.pozycja.x}_{self.stoły[numer].rakieta1.pozycja.y}\n\
-                    #        2 pozycja_{self.stoły[numer].rakieta2.pozycja.x}_{self.stoły[numer].rakieta2.pozycja.y}\n\
-                    #        p pozycja_{self.stoły[numer].piłka.pozycja.x}_{self.stoły[numer].piłka.pozycja.y}\n")
-                    x = float(reply.split("_")[1])
-                    y = float(reply.split("_")[2])
-                    if self.stoły[numer].gracz1 == k.połączenie:
-                        self.stoły[numer].pozycja1 = (x,y)
-                        self.stoły[numer].rakieta1.pozycja.x = x
-                        #self.stoły[numer].rakieta1.pozycja.y = 40
-                    else: 
-                        self.stoły[numer].pozycja2 = (x,y)
-                        self.stoły[numer].rakieta2.pozycja.x = 800 - x - 80
-                        #self.stoły[numer].rakieta2.pozycja.y = 
-                        
-                # zmiana pozycji piłeczki
-                if reply.startswith("piłeczka"):
-                    szerokość = int(reply.split("_")[1])
-                    wysokość = int(reply.split("_")[2])
-                    s = self.stoły[numer]
-                    s.piłeczka_pozycja_startowa = (szerokość/2, wysokość/2)
-                    
-                    (x,y) = s.piłeczka_pozycja
-                    x += s.prędkość_x
-                    y += s.prędkość_y
-                    s.piłeczka_pozycja = (x,y)
-                    s.piłka.pozycja.x = x
-                    s.piłka.pozycja.y = y
-                   
-                    if s.piłeczka_pozycja[0] < 0 or s.piłeczka_pozycja[0] > szerokość:
-                        s.prędkość_x *= -1 
-
-                    if s.piłeczka_pozycja[1] < 0 or s.piłeczka_pozycja[1] > wysokość:
-                        s.prędkość_y *= -1
-
-                    # odbijanie od rakietki
-                    if s.piłka.pozycja.colliderect(s.rakieta1.pozycja) or s.piłka.pozycja.colliderect(s.rakieta2.pozycja):
-                        #print(f"Odbicie {s.piłeczka_pozycja[1]}")
-                        if (s.piłka.pozycja.y < 100 and s.prędkość_y < 0
-                            or s.piłka.pozycja.y  > 200 and s.prędkość_y > 0):
-                            s.prędkość_y *= -1
-                            print(f"1 pozycja_{self.stoły[numer].rakieta1.pozycja.x}_{self.stoły[numer].rakieta1.pozycja.y}\n\
-                            2 pozycja_{self.stoły[numer].rakieta2.pozycja.x}_{self.stoły[numer].rakieta2.pozycja.y}\n\
-                            p pozycja_{self.stoły[numer].piłka.pozycja.x}_{self.stoły[numer].piłka.pozycja.y}\n")
-
-                    
-                    if s.piłeczka_pozycja[1] < 0:
-                        s.score[0] += 1
-                        self.reset_piłki(s)
-                    elif s.piłeczka_pozycja[1] > wysokość:
-                        s.score[1] += 1
-                        self.reset_piłki(s)
-
-                    # pomimo, że na serwerze zapisywane są wyniki i pozycja piłki jak dla pierwszego gracza
-                    # drugi gracz powinien dostać je symetryczne
-                    if s.gracz1 == k.połączenie:
-                        odpowiedź = f"zmien.poz.pił_{s.piłeczka_pozycja}_{s.score}_"
-                    else:
-                        (x_pił,y_pił) = s.piłeczka_pozycja
-                        zwracana_pozycja = (szerokość - x_pił, wysokość - y_pił)
-                        zwracany_score = s.score[::-1]
-                        odpowiedź = f"zmien.poz.pił_{zwracana_pozycja}_{zwracany_score}_"
-                """
+                #pobieranie pozycji rankigowej
+                elif reply.startswith("ranking")  and user_nick:
+                    odpowiedź = self.ranking(user_nick)
 
 
                 if reply == "__shut_down__":

@@ -14,7 +14,6 @@ class EkranLogowania(QWidget):
         self.serwer = Network()
         self.setStyleSheet(styleSheet)
         self.interfejs()
-        #self.serwer.słuchaj()
 
 
     def interfejs(self):
@@ -52,12 +51,10 @@ class EkranLogowania(QWidget):
 
 
         self.login.setFocus()
-        #self.setGeometry(20, 20, 300, 100)
         self.setWindowIcon(QIcon("icon.png"))
         self.setWindowTitle("Pong by KK&AS")
 
         self.ekran_rejestracji = EkranRejestracji(self.serwer, styleSheet=self.styleSheet())
-        #self.stoly = Stoły()
 
     def wyjscie(self):
         self.close()
@@ -88,17 +85,12 @@ class EkranLogowania(QWidget):
                     raise ValueError('nie podano danych')
                     
                 if nadawca.text() == "Zaloguj":
-                    #TODO: Łączenie z serwerem, serwer łączy się z bazą danych i odsyła wiadomość czy jest taki login i czy pasuje hasło
                     odp = self.serwer.wyślij(f"zaloguj_{login}_{haslo}").split("_")
                     print(odp)
                     if len(odp) > 1:
                         ekran_stołów = stoly.EkranStolow(self.serwer,login, parent_window = self, styleSheet = self.styleSheet())
                         ekran_stołów.show()
                         self.hide()
-                        #pong.start(1200,780,300,30)
-                        
-                    #self.hide()
-                    #self.ekran_stołów.show()
                 
     
             except:
@@ -147,7 +139,6 @@ class EkranRejestracji(QWidget):
         OKBtn.clicked.connect(self.akcja)
        
         self.login.setFocus()
-        #self.setGeometry(20, 20, 300, 100)
         self.setWindowIcon(QIcon("icon.png"))
         self.setWindowTitle("Pong by KK&AS")
 
@@ -180,7 +171,6 @@ class EkranRejestracji(QWidget):
                     raise ValueError('złe dane')
                     
                 if nadawca.text() == "OK":
-                    #TODO: Łączenie z serwerem, serwer łączy się z bazą danych i odsyła wiadomość czy jest taki login i czy pasuje hasło
                     self.serwer.wyślij(f"zarejestruj_{login}_{haslo}").split("_")
                     self.hide()
 
