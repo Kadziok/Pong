@@ -5,17 +5,3 @@ Użyte biblioteki:
 pygame
 PyQt5
 mysql-connector-python
-
-Konfiguracja MySQL:
-host="localhost",
-user="server",
-passwd="zaq1@WSX",
-database="pong"
-
-Kod SQL:
-CREATE TABLE users (
-id INT(6) UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-login VARCHAR(30) NOT NULL,
-password VARCHAR(30) NOT NULL
-);
-

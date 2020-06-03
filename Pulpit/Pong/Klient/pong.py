@@ -4,7 +4,19 @@ import network
 from time import sleep
 
 class Plansza(object):
+    """ Klasa odpowiadająca za stworzenie planszy do gry """
     def __init__(self, szerokość, wysokość,tabela,r_kulki,serwer,mój_nick,nick_przeciwnika, gra):
+        """
+        In:
+        ---
+        szerokość, wysokość - rozmiar planszy
+        tabela - rozmiar tabeli z boku
+        r_kulki - promień piłki
+        server - instacja serwera (Network)
+        mój_nick - nick gracza
+        nick_przecinika - nick przeciwnika gracza
+        gra - instancja stowroznej gry (PongGame)
+        """
         self.tabela = tabela
         self.szerokość = szerokość
         self.wysokość = wysokość
@@ -15,7 +27,6 @@ class Plansza(object):
         self.ekran = pygame.display.set_mode((szerokość+tabela, wysokość))
         self.gra = gra
         
-
         pygame.display.set_caption('Pong by KK&AS')
 
     def rysuj(self, *args):
@@ -23,11 +34,13 @@ class Plansza(object):
             tło = [255, 255, 255]
             self.ekran.fill(tło, (0,0, self.szerokość + self.r_kulki + 3, self.wysokość))
             self.ekran.fill((123,123,123), (self.szerokość + self.r_kulki + 8, 0,self.szerokość + self.tabela, self.wysokość))
+            # aktualizuje pozycję dla wszystich dziedzicących po klasie Rysujące
             for drawable in args:
                 drawable.aktualizacja(self.ekran)
             pygame.display.update()
 
 class PongGame(object):
+    """ Klasa odpowiadająca za stworzenie gry  w Ponga"""
     def __init__(self, szerokość, wysokość, tabela, r_kulki, serwer, mój_nick, nick_przeciwnika):
         pygame.init()
         print("Rozpoczęto grę")
@@ -66,7 +79,7 @@ class PongGame(object):
 
     @staticmethod
     def odbierz_wiadomosc(wiadomość, gra):
-        
+        """ Służy do odbierania wiadomości z serwera podczas włączonej gry """
         if wiadomość.startswith("ustaw"):
             x = int(wiadomość.split("_")[1])
             if x > 800:
@@ -97,7 +110,6 @@ class PongGame(object):
             gra.zakończ()
 
 
-
 class Przeciwnik(object):
     def __init__(self, rakieta, piłka):
         self.piłka = piłka
@@ -105,6 +117,7 @@ class Przeciwnik(object):
     def move(self):
         x = self.piłka.pozycja.centerx
         self.rakieta.move(x)     
+
 
 class Rysujące(object):
     def __init__(self, szerokość, wysokość, x, y, kolor):
@@ -117,13 +130,14 @@ class Rysujące(object):
     def aktualizacja(self, ekran):
         ekran.blit(self.ekran, self.pozycja)
         
+
 class Sędzia(Rysujące):
+    """ Klasa aktualizująca wyniki w tabelce"""
     def __init__(self, Plansza, piłka, *args):
         self.piłka = piłka
         self.Plansza = Plansza
         self.rakiety = args
         self.score = [0, 0]
-
 
     def drukuj_tekst(self, ekran,  text, x, y):
         moj_font = pygame.font.SysFont('agencyfb',30)
@@ -137,13 +151,13 @@ class Sędzia(Rysujące):
         szerokość = self.Plansza.szerokość
         tabela = self.Plansza.tabela
        
-        
         self.drukuj_tekst(ekran, f"{self.Plansza.mój_nick} {self.score[0]}", szerokość+tabela/2 , wysokość*0.05)
         self.drukuj_tekst(ekran, f"{self.Plansza.nick_przeciwnika} {self.score[1]}", szerokość+tabela/2 ,wysokość*0.1 )
 
 
 
 class Rakieta(Rysujące):
+    """ Klasa do obsługi rakietki na planszy"""
     def __init__(self, szerokość, wysokość, x, y, kolor,szerokość_planszy,r_kulki, nick, serwer):
         super(Rakieta, self).__init__(szerokość, wysokość, x, y, kolor)
         self.szerokość_planszy = szerokość_planszy
@@ -162,7 +176,9 @@ class Rakieta(Rysujące):
             self.pozycja.x = self.szerokość_planszy + self.r_kulki + 4 - self.szerokość 
         self.serwer.wyślij(f"ustaw_{self.pozycja.x}_{self.pozycja.y}_{self.szerokość}_{self.wysokość}_")
 
+
 class Piłeczka(Rysujące):
+    """ Klasa do obsługi piłeczki na planszy """
     def __init__(self, serwer, szerokość, wysokość, x, y, kolor=(255, 0, 0), prędkość_x=1, prędkość_y=1):
         super(Piłeczka, self).__init__(szerokość, wysokość, x, y, kolor)
         pygame.draw.ellipse(self.ekran, self.kolor, [0, 0, self.szerokość, self.wysokość])
@@ -179,13 +195,11 @@ class Piłeczka(Rysujące):
 
 
 def start(szerokość, wysokość,tabela,r_kulki, serwer, mój_nick, nick_przeciwnika):
+    """ Uruchamia grę """
     gra = PongGame(szerokość, wysokość,tabela,r_kulki, serwer, mój_nick, nick_przeciwnika)
 
     serwer.zakoncz_nasluchiwanie()
     serwer.słuchaj(PongGame.odbierz_wiadomosc, gra)
 
     gra.run()
-
-if __name__ == "__main__":
-   start(1200,780,300,30,None,"y", "x")
     

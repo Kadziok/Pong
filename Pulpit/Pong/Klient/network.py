@@ -5,6 +5,7 @@ import traceback
 
 
 class Network:
+    """ Klasa odpowiadająca za połączenie klienta z serwerem """
     def __init__(self):
         self.client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.server = "localhost"
@@ -12,21 +13,18 @@ class Network:
         self.czekaj = True
         self.addr = (self.server, self.port)
         odp = self.połącz()
-        #self.id = None
         if odp:
             self.połączony = True
         else:
             self.połączony = False
-        #print(self.id)
+
 
     def obsłuż(self, odpowiedź):
-        #sys.stdout.buffer.write(str.encode(odpowiedź + "\n"))
         print("\nOdpowiedź: " + odpowiedź)
         if odpowiedź == "SerwerWyłączony":
             pass
 
     def obsługa_komunikatów(self, funkcja, inne):
-        #conn.send(str.encode("Connected"))
         reply = ""
 
 
@@ -47,7 +45,7 @@ class Network:
 
         print("Lost connection", self.czekaj)
         self.połączony = False
-        #conn.close()
+
 
     def połącz(self):
         try:
@@ -73,10 +71,3 @@ class Network:
 
     def zakoncz_nasluchiwanie(self):
         self.czekaj = True
-
-if __name__ == "__main__":
-    net = Network()
-    net.słuchaj()
-    while net.połączony:
-        net.wyślij(input("Wyślij:"))
-

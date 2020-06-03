@@ -2,6 +2,7 @@ import pygame
 import pygame.locals
 
 class Rakieta:
+    """ Klasa przechowywująca na serwerze informację o rakiecie"""
     def __init__(self, wysokość, szerokość, x, y):
         self.szerokość = szerokość
         self.wysokość = wysokość
@@ -9,6 +10,7 @@ class Rakieta:
         self.pozycja = self.ekran.get_rect(x=x, y=y)
 
 class Piłka:
+    """ Klasa przechowywująca na serwerze informację o piłce"""
     def __init__(self, wysokość, szerokość, x, y):
         self.szerokość = szerokość
         self.wysokość = wysokość
@@ -17,7 +19,7 @@ class Piłka:
 
 class Stół:
     stoły = {}
-
+    """ Klasa przechowywująca na serwerze informację o stworzonych stołach"""
     def __init__(self, numer, gracz, nick_gracza):
         self.ekran = pygame.display.set_mode((800, 400))
         self.ekran = pygame.Surface([800, 400], pygame.SRCALPHA, 32).convert_alpha()

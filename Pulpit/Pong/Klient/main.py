@@ -1,16 +1,18 @@
 import sys
 import pong
 import stoly
-from PyQt5.QtWidgets import QApplication, QWidget,  QLineEdit, QMessageBox, QPushButton, QHBoxLayout, QLabel, QGridLayout
+from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QGridLayout
+from PyQt5.QtWidgets import QLineEdit, QMessageBox, QPushButton, QHBoxLayout
 from PyQt5.QtGui import QIcon
 from network import Network
 import traceback
 
 
 class EkranLogowania(QWidget):
-
+    """ Klasa odpowiadająca za tworzenie ekranu logowania"""
     def __init__(self, parent=None, styleSheet = ""):
         super().__init__(parent)
+        # łączenie z serwerem
         self.serwer = Network()
         self.setStyleSheet(styleSheet)
         self.interfejs()
@@ -100,7 +102,7 @@ class EkranLogowania(QWidget):
 #################################################################################
 
 class EkranRejestracji(QWidget):
-
+    """ Klasa odpowiadająca za stworzenie ekranu rejestracji """
     def __init__(self, serwer,  parent=None, styleSheet = ""):
         super().__init__(parent)
         self.interfejs()
@@ -181,6 +183,7 @@ class EkranRejestracji(QWidget):
 ###################################################################################################
 
 def uruchom():
+    """ Uruchamia aplikację kliencką """
     app = QApplication(sys.argv)
     stylesheet = None
     try:

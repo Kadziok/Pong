@@ -7,23 +7,31 @@ from _thread import *
 import sys
 import os
 import mysql.connector
-
+import traceback
 
 
 class Serwer:
-    import os
-    import socket
-    from _thread import start_new_thread
-    import mysql.connector
-    import traceback
-
-
+    """ Klasa odpowiadająca za stworzenie serwera do gry w Ponga """
     def __init__(self, ip, port):
+        """
+        In
+        ---
+        ip
+            adress IP, na którym zostanie postawiony serwer
+        port
+            numer portu, na którym zostanie postawiony serwer
+        """
         self.ip = ip
         self.port = 5555
         self.klienci = []
         self.włączony = True
         self.stoły = {}
+        self.s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        try:
+            self.s.bind((ip, port))
+        except socket.error as e:
+            str(e)
+        # niezbędne dane do połączenia z bazą danych
         self.mydb = mysql.connector.connect(
             host="localhost",
             user="server",
@@ -31,15 +39,8 @@ class Serwer:
             database="pong"
             )
 
-        self.s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-
-        try:
-            self.s.bind((ip, port))
-        except socket.error as e:
-            str(e)
-
-
     def wyłącz(self):
+        """Powiadamia klientów o przerwaniu pracy serwera i wyłącza serwer"""
         import os
         while self.klienci:
             self.klienci[0].rozłącz("SerwerWyłączony")
@@ -49,11 +50,26 @@ class Serwer:
         self.s.shutdown()
 
     def zaloguj(self, dane):
+        """
+        Przeszukuje bazę danych w celu sprawdzenia
+        czy dany użytkownik może się zalogować
+
+        In
+        ---
+        dane - tablica [login, hasło]
+
+        Out
+        ---
+        None - jeśli nie ma takiego użytkownika
+        Numer id użytkownika - jeśli zalogowanie przebiegło pomyślnie
+
+        """
+
         mycursor = self.mydb.cursor()
         print("Próba zalogowania:", dane)
         if len(dane) < 2:
             return None
-
+        print(dane)
         mycursor.execute(f"SELECT id FROM users WHERE\
             login=\"{dane[0]}\" AND password=\"{dane[1]}\";")
 
@@ -66,6 +82,15 @@ class Serwer:
             return None
 
     def zarejestruj(self, dane):
+        """Wstawia do bazy danych nowego użytkownika
+        In
+        ---
+        dane - tablica [login, hasło]
+
+        Out
+        ---
+        Numer id użytkownika 
+        """
         mycursor = self.mydb.cursor()
 
         sql = "INSERT INTO users (login, password) VALUES (%s, %s)"
@@ -78,6 +103,11 @@ class Serwer:
         return mycursor.lastrowid
 
     def zapisz_wynik(self, dane):
+        """ Wstawia do bazy wynik rozegranego meczu
+        In
+        ---
+        dane - [nick1, nick2, punkty1, punkty2, zwyciężca]
+        """
         try:
             mycursor = self.mydb.cursor()
         except:
@@ -100,6 +130,17 @@ class Serwer:
         return mycursor.lastrowid
 
     def ranking(self, nick):
+        """
+        Wysyła zapytanie do bazy danych o numer gracza w rankingu
+
+        In
+        ---
+        nick
+
+        Out
+        ---
+        Miejsce w rankingu
+        """
         try:
             mycursor = self.mydb.cursor()
         except:
@@ -110,13 +151,12 @@ class Serwer:
                 database="pong"
                 )
             mycursor = self.mydb.cursor()
-        
+
         mycursor.execute("select winner, count(winner) as wins \
              from scores group by winner order by wins desc;")
 
         res = mycursor.fetchall()
 
-        
         n = 1
         for i in res:
             if i[0] == nick:
@@ -125,11 +165,25 @@ class Serwer:
 
         if n > len(res):
             n = -1
-        
+
         return str(n)
 
-
     def threaded_client(self, k):
+        """
+        Obsługa komuniktów wysyłanych przez klienta:
+        wyloguj - wylogowywuje gracza
+        zaloguj_login_hasło - loguje gracza
+        zarejestruj_login_hasło - rejestruje gracza
+        zrezygnuj - rezygnuje z gry podczas czegania na przeciwnika
+        czekam - sprawdza czy nikt nie dołączył do stołu
+        ustaw_x_y - zmienia pozycję rakiety na planszy
+        piłeczka_w_h - aktualizuje pozycję piłki
+        pobierzstoly - pobiera listę stołów
+        stworzstol_numer - tworzy nowy stół
+        dolacz_numer - dołącza do stołu
+        nickprzeciwnika_numer - zwraca nick przeciwnika ze stołu
+        ranking - zwraca miejsce w rankingu
+        """
         import traceback
         k.wyślij("Connected")
         reply = ""
@@ -137,7 +191,7 @@ class Serwer:
         gra = False
         user_id = None
         przeciwnik = None
-        numer = None 
+        numer = None
         user_nick = None
 
         while True:
@@ -147,17 +201,16 @@ class Serwer:
 
                 odpowiedź = "NieznaneZapytanie"
 
-                # Wylogowanie, przypisanie wszytkim zmiennym wartości początkowych
+                # Wylogowanie, przypisanie zmiennym wartości początkowych
                 if reply.startswith("wyloguj"):
                     gra = False
                     user_id = None
                     przeciwnik = None
-                    numer = None 
+                    numer = None
                     user_nick = None
                     k.wyślij("wylogowano")
                     continue
-                    
-                
+
                 # Obsługa logowania
                 if not user_id:
                     dane = reply.split("_")[1:]
@@ -165,10 +218,11 @@ class Serwer:
                         user_id = self.zaloguj(dane)
                     elif reply.startswith("zarejestruj"):
                         user_id = self.zarejestruj(dane)
-                    
                     if user_id:
                         mycursor = self.mydb.cursor()
-                        mycursor.execute(f"SELECT login FROM users WHERE id=\"{user_id}\";")
+                        query = f"SELECT login FROM \
+                            users WHERE id=\"{user_id}\";"
+                        mycursor.execute(query)
                         myresult = mycursor.fetchall()
                         user_nick = myresult[0][0]
                         odpowiedź = f"zalogowany_{user_id}"
@@ -176,8 +230,7 @@ class Serwer:
                         odpowiedź = "błądlogowania"
 
                 # Obsługa gry
-                elif gra: 
-
+                elif gra:
                     # Rezygnacja z gry, np w trakcie oczekiwania na przeciwnika
                     if reply.startswith("zrezygnuj"):
                         self.stoły.pop(numer, None)
@@ -189,53 +242,50 @@ class Serwer:
 
                     if reply.startswith("czekam"):
                         if not self.stoły[numer].czeka:
-                            przeciwnik = self.stoły[numer].przeciwnik(k.połączenie)
+                            s = self.stoły[numer]
+                            przeciwnik = s.przeciwnik(k.połączenie)
                             odpowiedź = "1"
                         else:
                             odpowiedź = "0"
-                    
 
                     # zmiana pozycji rakietki
                     elif reply.startswith("ustaw"):
                         x = float(reply.split("_")[1])
                         y = float(reply.split("_")[2])
                         if self.stoły[numer].gracz1 == k.połączenie:
-                            self.stoły[numer].pozycja1 = (x,y)
+                            self.stoły[numer].pozycja1 = (x, y)
                             self.stoły[numer].rakieta1.pozycja.x = x
-                        else: 
-                            self.stoły[numer].pozycja2 = (x,y)
+                        else:
+                            self.stoły[numer].pozycja2 = (x, y)
                             self.stoły[numer].rakieta2.pozycja.x = 800 - x - 80
-                            
+
                     # zmiana pozycji piłeczki
                     elif reply.startswith("piłeczka"):
                         szerokość = int(reply.split("_")[1])
                         wysokość = int(reply.split("_")[2])
                         s = self.stoły[numer]
-                        s.piłeczka_pozycja_startowa = (szerokość/2, wysokość/2)
-                        
-                        (x,y) = s.piłeczka_pozycja
+                        p = (szerokość/ 2, wysokość/ 2)
+                        s.piłeczka_pozycja_startowa = p
+                        (x, y) = s.piłeczka_pozycja
                         x += s.prędkość_x
                         y += s.prędkość_y
-                        s.piłeczka_pozycja = (x,y)
+                        s.piłeczka_pozycja = (x, y)
                         s.piłka.pozycja.x = x
                         s.piłka.pozycja.y = y
-                    
                         if s.piłeczka_pozycja[0] < 0 or s.piłeczka_pozycja[0] > szerokość:
                             s.prędkość_x *= -1 
-
                         if s.piłeczka_pozycja[1] < 0 or s.piłeczka_pozycja[1] > wysokość:
                             s.prędkość_y *= -1
-
                         # odbijanie od rakietki
-                        if s.piłka.pozycja.colliderect(s.rakieta1.pozycja) or s.piłka.pozycja.colliderect(s.rakieta2.pozycja):
+                        if(s.piłka.pozycja.colliderect(s.rakieta1.pozycja) or
+                           s.piłka.pozycja.colliderect(s.rakieta2.pozycja)):
                             if (s.piłka.pozycja.y < 100 and s.prędkość_y < 0
                                 or s.piłka.pozycja.y  > 200 and s.prędkość_y > 0):
+
                                 s.prędkość_y *= -1
                                 print(f"1 pozycja_{self.stoły[numer].rakieta1.pozycja.x}_{self.stoły[numer].rakieta1.pozycja.y}\n\
                                 2 pozycja_{self.stoły[numer].rakieta2.pozycja.x}_{self.stoły[numer].rakieta2.pozycja.y}\n\
                                 p pozycja_{self.stoły[numer].piłka.pozycja.x}_{self.stoły[numer].piłka.pozycja.y}\n")
-
-                        
                         if s.piłeczka_pozycja[1] < 0:
                             s.score[0] += 1
                             self.reset_piłki(s)
@@ -265,7 +315,6 @@ class Serwer:
                             
                             numer = None
 
-
                         # pomimo, że na serwerze zapisywane są wyniki i pozycja piłki jak dla pierwszego gracza
                         # drugi gracz powinien dostać je symetryczne
                         if s.gracz1 == k.połączenie:
@@ -275,8 +324,6 @@ class Serwer:
                             zwracana_pozycja = (szerokość - x_pił, wysokość - y_pił)
                             zwracany_score = s.score[::-1]
                             odpowiedź = f"zmien.poz.pił_{zwracana_pozycja}_{zwracany_score}_"
-
-
                 else:
                     # Pobieranie listy stołów
                     if reply.startswith("pobierzstoly"):
@@ -310,8 +357,6 @@ class Serwer:
                             odpowiedź = "stolnieistnieje"
                         gra = True
 
-
-
                 # pobieranie nicku przeciwnika
                 if reply.startswith("nickprzeciwnika"):
                     numer = int(reply.split("_")[1])
@@ -320,7 +365,6 @@ class Serwer:
                         odpowiedź = str(s.gracz2_nick)
                     else:
                         odpowiedź = str(s.gracz1_nick)
-
 
                 #pobieranie pozycji rankigowej
                 elif reply.startswith("ranking")  and user_nick:
@@ -357,14 +401,15 @@ class Serwer:
                 if (self.stoły[stol].gracz1 == k.połączenie
                     or self.stoły[stol].gracz1 == k.połączenie):
                    self.stoły.pop(stol, None)
-
         print("Lost connection")
         k.rozłącz()
     
     def reset_piłki(self,stół):
+        """ Resetuje pozycję piłki po zdobyciu punktu"""
         stół.piłeczka_pozycja = stół.piłeczka_pozycja_startowa
 
     def słuchaj(self):
+        """ Uruchamia nasłuchiwanie klientów """
         self.s.listen()
         print("Waiting for a connection, Server Started")
 
@@ -374,15 +419,6 @@ class Serwer:
                 k = klient.Klient(conn, self) 
                 print("Connected to:", addr)
                 self.klienci.append(k)
-
                 start_new_thread(Serwer.threaded_client, (self, k,))
             except OSError:
                 pass
-
-
-if __name__ == "__main__":
-    ip = "localhost"
-    port = 5555
-
-    serwer = Serwer(ip, port)
-    serwer.słuchaj()

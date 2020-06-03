@@ -29,10 +29,11 @@ class EkranStolow(QWidget):
         self.interfejs()
 
 
-    """        
-    Tworzy interfejs okna
-    """
+
     def interfejs(self):
+        """        
+        Tworzy interfejs okna
+        """
         self.już_w_stole = False
         self.setWindowIcon(QIcon("icon.png"))
         self.setWindowTitle("Pong by KK&AS")
@@ -40,7 +41,6 @@ class EkranStolow(QWidget):
         self.lista = QListWidget()
         self.lista.setFrameStyle(QFrame.NoFrame)
         self.lista.itemDoubleClicked.connect(self.dolacz)
-
 
         odp = self.serwer.wyślij("pobierzstoly").split("_")
         self.elementy = []
@@ -107,10 +107,11 @@ class EkranStolow(QWidget):
         self.setLayout(uklad)
 
 
-    """
-    Tworzy stół i uruchamia okno oczekiwania na przeciwnika
-    """
+   
     def dodaj_stol(self):
+        """
+        Tworzy stół i uruchamia okno oczekiwania na przeciwnika
+        """
         if not self.już_w_stole:
             stol = self.numer.text()
             self.numer.setText("")
@@ -137,10 +138,11 @@ class EkranStolow(QWidget):
             QMessageBox.warning(self, "Błąd", "Jesteś już w stole", QMessageBox.Ok)
 
         
-    """
-    Dołącza do gry na już utworzonym stole
-    """
+
     def dolacz(self, item):
+        """
+        Dołącza do gry na już utworzonym stole
+        """
         if not self.już_w_stole:
             numer = self.numer.text().strip()
             if numer == "":
@@ -160,10 +162,10 @@ class EkranStolow(QWidget):
              QMessageBox.warning(self, "Błąd", "Jesteś już w stole", QMessageBox.Ok)
 
 
-    """
-    Pobiera i wyświetla listę aktualnie utworzonych stołów
-    """
     def aktualizuj(self):
+        """
+        Pobiera i wyświetla listę aktualnie utworzonych stołów
+        """
         while self.zalogowany:
             if not self.już_w_stole:
                 odp = self.serwer.wyślij("pobierzstoly").split("_")
@@ -184,18 +186,17 @@ class EkranStolow(QWidget):
             sleep(1)
 
 
-    """
-    Otwiera okno gry
-    """
     def zacznij_grę(self, nick_przeciwnika):
+        """
+        Otwiera okno gry
+        """
         print("Rozpoczynanie gry")
         pong.start(800,400,300,30,self.serwer,self.mój_nick, nick_przeciwnika)
 
-
-    """
-    Wylogowuje (resetowanie danych użytkownika na serwerze) i pokazuje okno logowania
-    """
     def wyloguj(self):
+        """
+        Wylogowuje (resetowanie danych użytkownika na serwerze) i pokazuje okno logowania
+        """
         if self.serwer.wyślij("wyloguj").startswith("wylogowano"):
             self.zalogowany = False
             self.hide()
@@ -209,11 +210,12 @@ class EkranStolow(QWidget):
 
 
 #############################################################################
-"""
-Okno do oczekiwania na dołącznie drugiego gracza
-"""
+
 
 class TranslucentWidget(QtWidgets.QWidget):
+    """
+    Okno do oczekiwania na dołącznie drugiego gracza
+    """
     def __init__(self, parent=None):
         super(TranslucentWidget, self).__init__(parent)
 
@@ -241,10 +243,11 @@ class TranslucentWidget(QtWidgets.QWidget):
         self.close_btn.setFont(font)
         self.close_btn.clicked.connect(self.zamknij)
 
-    """
-    Rozmieszcza elementy okna
-    """
+    
     def paintEvent(self, event):
+        """
+        Rozmieszcza elementy okna
+        """
         s = self.size()
         qp = QPainter()
         qp.begin(self)
@@ -284,10 +287,11 @@ class TranslucentWidget(QtWidgets.QWidget):
         qp.end()
 
 
-    """
-    Zamyka okno oczekiwania i ponownie uruchamia aktualizowanie listy stołów
-    """
+  
     def zamknij(self):
+        """
+        Zamyka okno oczekiwania i ponownie uruchamia aktualizowanie listy stołów
+        """
         odp = QMessageBox.question(self, 'Komunikat',"Czy na chcesz zrezygnować z gry?",
             QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
 
@@ -302,10 +306,11 @@ class TranslucentWidget(QtWidgets.QWidget):
         self.counter = 0
 
 
-    """
-    Sprawdza, czy drugi gracza dołączył do gry
-    """
+    
     def timerEvent(self, event):
+        """
+        Sprawdza, czy drugi gracza dołączył do gry
+        """
         self.counter += 1
         self.update()
     
@@ -321,11 +326,3 @@ class TranslucentWidget(QtWidgets.QWidget):
         if not self.isVisible():
             self.killTimer(self.timer)
             self.hide()
-
-
-	
-if __name__ == '__main__':
-    app = QApplication(sys.argv)
-    okno = EkranStolow(None, None)
-    okno.show()
-    app.exec_()
